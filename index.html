@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PicklePro OP Builder V1.24</title>
+    <title>PicklePro OP Builder V1.25</title>
     <style>
         /* Modern Color Palette & Typography */
         :root {
@@ -32,6 +32,14 @@
         header h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 2px; }
         header p { font-size: 0.85rem; opacity: 0.9; }
         @media (min-width: 640px) { header { padding: 24px; margin-bottom: 24px; } header h1 { font-size: 2rem; } header p { font-size: 0.95rem; } }
+
+        /* Session Controls Bar */
+        .session-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: center; margin-bottom: 16px; background: #fff; padding: 12px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid var(--border); }
+        .session-controls button { flex: 1; min-width: 130px; display: flex; justify-content: center; align-items: center; gap: 6px; }
+        .btn-save { background-color: var(--secondary); }
+        .btn-save:hover { background-color: var(--secondary-hover); }
+        .btn-end { background-color: var(--danger); }
+        .btn-end:hover { background-color: var(--danger-hover); }
 
         .card { background: var(--card-bg); padding: 16px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid var(--border); }
         @media (min-width: 640px) { .card { padding: 24px; } }
@@ -84,14 +92,11 @@
         .rank-icon { font-size: 1.1rem; margin-right: 3px; }
 
         .tier-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
-        .tier-pawn { background: #e5e7eb; color: #4b5563; }
-        .tier-knight { background: #dbeafe; color: #1e40af; }
-        .tier-duke { background: #fef3c7; color: #92400e; }
-        .tier-right { background: #e0f2fe; color: #0369a1; }
         .tier-lexon { background: #f3e8ff; color: #6b21a8; }
-        .tier-sultan { background: #ffe4e6; color: #9f1239; }
-        .tier-body { background: #d1fae5; color: #065f46; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 0.9; } 50% { opacity: 1; box-shadow: 0 0 8px rgba(5, 150, 105, 0.4); } 100% { opacity: 0.9; } }
+        .tier-right { background: #e0f2fe; color: #0369a1; }
+        .tier-dili { background: #fef3c7; color: #92400e; }
+        .tier-dikamao { background: #dbeafe; color: #1e40af; }
+        .tier-uli { background: #e5e7eb; color: #4b5563; }
 
         details { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; margin-top: 16px; overflow: hidden; }
         summary { padding: 14px 20px; font-weight: 700; cursor: pointer; background: #f9fafb; list-style: none; display: flex; justify-content: space-between; font-size: 0.95rem; }
@@ -104,6 +109,13 @@
         .status-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 6px; }
         .status-w { background: #dcfce7; color: #166534; }
         .status-l { background: #fee2e2; color: #991b1b; }
+
+        /* Session History Item */
+        .history-item { padding: 12px; border: 1px solid var(--border); border-left: 5px solid var(--primary); border-radius: 8px; margin-bottom: 8px; background: #f9fafb; cursor: pointer; transition: all 0.2s ease; display: flex; justify-content: space-between; align-items: center; }
+        .history-item:hover { transform: translateX(4px); border-color: var(--primary); background: #ffffff; }
+        .history-title { font-weight: bold; color: var(--text-main); margin-bottom: 4px; }
+        .history-date { font-size: 0.8rem; color: var(--text-muted); }
+        .history-stats { text-align: right; font-size: 0.85rem; color: var(--text-main); }
         
     </style>
 </head>
@@ -111,11 +123,17 @@
 
     <header>
         <h1>Right Fit Pickleball Club OpenPlay Builder</h1>
-        <p>Powered by PicklePro PPR Engine (V1.24)</p>
+        <p>Powered by PicklePro PPR Engine (V1.25)</p>
     </header>
 
-    <div class="container">
-        
+    <div class="container" style="margin-top: -8px;">
+        <!-- SESSION CONTROLS -->
+        <div class="full-width session-controls">
+            <button id="btnSave" class="btn-save" onclick="handleManualSave()">💾 Save Session</button>
+            <button onclick="handleNewSession()">🆕 New Session</button>
+            <button class="btn-end" onclick="handleEndSession()">🏁 End Session</button>
+        </div>
+
         <div>
             <div class="card" style="margin-bottom: 16px;">
                 <h2>Add Player</h2>
@@ -183,6 +201,15 @@
             </details>
         </div>
 
+        <!-- NEW: SESSION HISTORY ARCHIVE -->
+        <div class="full-width card" style="margin-top: 16px;">
+            <h2>Session History Archive</h2>
+            <div id="sessionHistoryList">
+                <!-- Archived sessions render here -->
+                <p style="color: var(--text-muted); font-size: 0.9rem;">No archived sessions yet.</p>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -192,49 +219,169 @@
         let activeMatches = [];
         let matchLogs = [];
         let matchCounter = 1;
+        let sessionStartTime = Date.now();
         
-        // Track History
         let partnerships = {}; 
         let opponents = {};
 
-// ==============================
-// Persistent Storage (V2)
-// ==============================
-const STORAGE_KEY = "picklepro_openplay_save";
-const SAVE_VERSION = 1;
-let saveTimeout = null;
+        const STORAGE_KEY = "picklepro_openplay_save";
+        const HISTORY_KEY = "picklepro_sessions_history";
+        const SAVE_VERSION = 2;
+        let saveTimeout = null;
 
-        
-// ==============================
-// SAVE / LOAD ENGINE
-// ==============================
-function getSaveData(){return {version:SAVE_VERSION,savedAt:new Date().toISOString(),players,queue,activeMatches,matchLogs,matchCounter,partnerships,opponents};}
-function scheduleSave(){clearTimeout(saveTimeout);saveTimeout=setTimeout(saveData,300);}
-function saveData(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(getSaveData()));}catch(e){console.error(e);}}
-function loadData(){
- const raw=localStorage.getItem(STORAGE_KEY);
- if(!raw)return;
- try{
-  const d=JSON.parse(raw);
-  players=d.players||{};
-  queue=d.queue||[];
-  activeMatches=d.activeMatches||[];
-  matchLogs=d.matchLogs||[];
-  matchCounter=d.matchCounter||1;
-  partnerships=d.partnerships||{};
-  opponents=d.opponents||{};
- }catch(e){console.error(e);localStorage.removeItem(STORAGE_KEY);}
-}
+        // ==============================
+        // SAVE / LOAD ENGINE
+        // ==============================
+        function getSaveData() {
+            return {
+                version: SAVE_VERSION, 
+                savedAt: new Date().toISOString(), 
+                players, queue, activeMatches, matchLogs, 
+                matchCounter, partnerships, opponents, sessionStartTime
+            };
+        }
+        function scheduleSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(saveData, 300); }
+        function saveData() { 
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(getSaveData())); } 
+            catch(e) { console.error(e); } 
+        }
+        function loadData() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if(!raw) return;
+            try {
+                const d = JSON.parse(raw);
+                players = d.players || {};
+                queue = d.queue || [];
+                activeMatches = d.activeMatches || [];
+                matchLogs = d.matchLogs || [];
+                matchCounter = d.matchCounter || 1;
+                partnerships = d.partnerships || {};
+                opponents = d.opponents || {};
+                sessionStartTime = d.sessionStartTime || Date.now();
+            } catch(e) { console.error(e); localStorage.removeItem(STORAGE_KEY); }
+        }
 
+        // ==============================
+        // NEW SESSION CONTROLS
+        // ==============================
 
-        // Utility: Generate Stars
+        function handleManualSave() {
+            saveData();
+            const btn = document.getElementById('btnSave');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Session Saved ✓';
+            btn.style.backgroundColor = 'var(--primary)';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.backgroundColor = '';
+            }, 2000);
+        }
+
+        function handleNewSession(force = false, archiveName = null) {
+            if (!force) {
+                if (!confirm("Start a new session?\n\nYour current session will be archived. All current rankings, courts, and queues will be cleared.")) return;
+            }
+
+            // Archive the session if there's actual data
+            if (Object.keys(players).length > 0 || matchLogs.length > 0) {
+                archiveCurrentSession(archiveName);
+            }
+
+            // Wipe Board Clean
+            players = {};
+            queue = [];
+            activeMatches = [];
+            matchLogs = [];
+            matchCounter = 1;
+            partnerships = {};
+            opponents = {};
+            sessionStartTime = Date.now();
+            
+            saveData();
+            updateUI();
+        }
+
+        function handleEndSession() {
+            if (Object.keys(players).length === 0 && matchLogs.length === 0) {
+                return alert("No active session to end.");
+            }
+
+            const ranked = getRankedPlayersArray();
+            let summary = "🏁 SESSION COMPLETE 🏁\n\n";
+
+            if (ranked.length > 0 && ranked[0].matchesPlayed > 0) {
+                summary += `🏆 Winner: ${ranked[0].name} (${ranked[0].wins}W - ${ranked[0].losses}L)\n`;
+                if(ranked[1] && ranked[1].matchesPlayed > 0) summary += `🥈 2nd: ${ranked[1].name}\n`;
+                if(ranked[2] && ranked[2].matchesPlayed > 0) summary += `🥉 3rd: ${ranked[2].name}\n\n`;
+            } else {
+                summary += `🏆 Winner: N/A\n\n`;
+            }
+
+            summary += `📊 Total Matches: ${matchLogs.length}\n`;
+            summary += `👥 Total Players: ${Object.keys(players).length}\n`;
+            
+            const mins = Math.max(1, Math.round((Date.now() - sessionStartTime) / 60000));
+            summary += `⏱️ Duration: ${mins} minutes\n\n`;
+            
+            summary += `Would you like to archive this and start a new session?`;
+
+            if (confirm(summary)) {
+                const sessName = prompt("Enter a name to save this session under:", `Open Play - ${new Date().toLocaleDateString()}`);
+                if (sessName !== null) {
+                    handleNewSession(true, sessName); 
+                }
+            }
+        }
+
+        function archiveCurrentSession(customName) {
+            const sessions = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            const name = customName || `Session - ${new Date().toLocaleDateString()}`;
+            const ranked = getRankedPlayersArray();
+            
+            const archive = {
+                id: 'sess_' + Date.now(),
+                name: name,
+                date: new Date().toLocaleString(),
+                matches: matchLogs.length,
+                playerCount: Object.keys(players).length,
+                winner: (ranked.length > 0 && ranked[0].matchesPlayed > 0) ? ranked[0].name : "N/A",
+                duration: Math.max(1, Math.round((Date.now() - sessionStartTime) / 60000)),
+                state: getSaveData() // Deep clone of current state
+            };
+            
+            sessions.push(archive);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions));
+        }
+
+        function restoreSession(sessionId) {
+            if (!confirm("Restore this session?\n\nWARNING: Your current active session will be permanently overwritten!")) return;
+            
+            const sessions = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            const sess = sessions.find(s => s.id === sessionId);
+            if (!sess) return;
+            
+            const d = sess.state;
+            players = d.players || {};
+            queue = d.queue || [];
+            activeMatches = d.activeMatches || [];
+            matchLogs = d.matchLogs || [];
+            matchCounter = d.matchCounter || 1;
+            partnerships = d.partnerships || {};
+            opponents = d.opponents || {};
+            sessionStartTime = d.sessionStartTime || Date.now();
+            
+            saveData();
+            updateUI();
+        }
+
+        // ==============================
+        // CORE LOGIC 
+        // ==============================
+
         function getStars(num) { return '★'.repeat(num) + '☆'.repeat(5 - num); }
 
-        // Get Dynamic Tier (Recalibrated for better distribution)
         function getTierInfo(score) {
             let num = parseFloat(score);
-            
-            // Thresholds lowered so players can reach the top tiers
             if (num >= 80.0) return { name: 'Pina Lexon', class: 'tier-lexon' };
             if (num >= 60.0) return { name: 'Taga Right Fit', class: 'tier-right' };
             if (num >= 40.0) return { name: 'Dili Taga Right Fit', class: 'tier-dili' };
@@ -250,19 +397,15 @@ function loadData(){
             const name = nameInput.value.trim();
             const rating = parseInt(ratingInput.value);
 
-            const exists=Object.values(players).some(p=>p.name.toLowerCase()===name.toLowerCase());
-            if(exists){alert('Player already exists.');return;}
-
+            const exists = Object.values(players).some(p => p.name.toLowerCase() === name.toLowerCase());
+            if(exists) { alert('Player already exists.'); return; }
             if (!name) return alert('Please enter a player name.');
 
             const id = 'p_' + Date.now() + Math.floor(Math.random() * 1000);
             players[id] = {
                 id: id, name: name, rating: rating,
                 wins: 0, losses: 0, matchesPlayed: 0,
-                // New Advanced Tracking
-                waitTime: 0, 
-                consecutiveGames: 0,
-                lastResult: null 
+                waitTime: 0, consecutiveGames: 0, lastResult: null 
             };
 
             queue.push(id);
@@ -272,7 +415,11 @@ function loadData(){
         }
 
         function removePlayerFromQueue(id) {
-            queue = queue.filter(playerId => playerId !== id);
+            // Fix: Cleanly remove them entirely if they haven't played a game yet
+            queue = queue.filter(playerId => String(playerId) !== String(id));
+            if (players[id] && players[id].matchesPlayed === 0) {
+                delete players[id]; 
+            }
             updateUI();
         }
 
@@ -283,9 +430,6 @@ function loadData(){
             btn.disabled = checkboxes.length !== 4;
         }
 
-        // --- NEW SMART SCORING ENGINE ---
-
-        // Get combinations of array
         function getCombinations(arr, size) {
             let result = [];
             function combine(path, start) {
@@ -306,36 +450,25 @@ function loadData(){
             let pA1 = tA[0], pA2 = tA[1], pB1 = tB[0], pB2 = tB[1];
             let all4 = [pA1, pA2, pB1, pB2];
 
-            // 1. Same partner repeatedly (-50)
             score -= (getPartnerCount(pA1.id, pA2.id) + getPartnerCount(pB1.id, pB2.id)) * 50;
-
-            // 2. Same opponents repeatedly (-30)
             let oppCount = getOpponentCount(pA1.id, pB1.id) + getOpponentCount(pA1.id, pB2.id) + 
                            getOpponentCount(pA2.id, pB1.id) + getOpponentCount(pA2.id, pB2.id);
             score -= oppCount * 30;
 
-            // 3. Long waiting player (+20)
             score += all4.reduce((sum, p) => sum + p.waitTime, 0) * 20;
-
-            // 4. Lowest games played (-15 per game, giving advantage to those with fewer games)
             score -= all4.reduce((sum, p) => sum + p.matchesPlayed, 0) * 15;
-
-            // 5. Too many consecutive games (-20)
             score -= all4.reduce((sum, p) => sum + p.consecutiveGames, 0) * 20;
 
-            // 6. Winner vs Winner / Loser vs Loser (+100)
             let wCount = all4.filter(p => p.lastResult === 'W').length;
             let lCount = all4.filter(p => p.lastResult === 'L').length;
             
-            if (wCount === 4) score += 100; // Pure winner matchup
-            if (lCount === 4) score += 100; // Pure loser matchup
+            if (wCount === 4) score += 100; 
+            if (lCount === 4) score += 100; 
             
-            // Sub-bonus: Split winners up onto opposing teams to play each other
             if (wCount >= 2 && (pA1.lastResult==='W'||pA2.lastResult==='W') && (pB1.lastResult==='W'||pB2.lastResult==='W')) {
                 score += 40; 
             }
 
-            // 7. Balance Skill Rating (So courts aren't completely unfair)
             let ratingA = pA1.rating + pA2.rating;
             let ratingB = pB1.rating + pB2.rating;
             score -= Math.abs(ratingA - ratingB) * 40;
@@ -346,7 +479,6 @@ function loadData(){
         function startAutoMatch() {
             if (queue.length < 4) return alert('Not enough players in the queue! (Need 4)');
             
-            // To prevent massive lag, only evaluate combinations of the first 25 people in queue (12,650 combinations max)
             let evalPool = queue.slice(0, 25);
             let combos = getCombinations(evalPool, 4);
             
@@ -355,6 +487,9 @@ function loadData(){
 
             combos.forEach(fourIds => {
                 const p1 = players[fourIds[0]], p2 = players[fourIds[1]], p3 = players[fourIds[2]], p4 = players[fourIds[3]];
+                // Ensure none are undefined (safeguard against data glitches)
+                if(!p1 || !p2 || !p3 || !p4) return;
+                
                 let arrangements = [
                     { tA: [p1, p2], tB: [p3, p4] },
                     { tA: [p1, p3], tB: [p2, p4] },
@@ -366,9 +501,8 @@ function loadData(){
                 });
             });
 
-            console.log(`Auto-Match selected with Fairness Score: ${highestScore}`);
-            
-            // Remove selected from queue
+            if (!bestMatch) return alert('Error building match. Clear queue and try again.');
+
             let selectedIds = [...bestMatch.tA.map(p=>p.id), ...bestMatch.tB.map(p=>p.id)];
             queue = queue.filter(id => !selectedIds.includes(id));
             
@@ -381,7 +515,6 @@ function loadData(){
             let selectedIds = Array.from(checkboxes).map(cb => cb.value);
             queue = queue.filter(id => !selectedIds.includes(id));
             
-            // Still run the scoring engine to automatically figure out the fairest way to team these 4 specific people up!
             const p1 = players[selectedIds[0]], p2 = players[selectedIds[1]], p3 = players[selectedIds[2]], p4 = players[selectedIds[3]];
             let arrangements = [
                 { tA: [p1, p2], tB: [p3, p4] },
@@ -402,13 +535,13 @@ function loadData(){
         }
 
         function createMatchConfigured(matchConfig) {
-            // Update tracking stats for everyone left in queue
             queue.forEach(id => {
-                players[id].waitTime++;
-                players[id].consecutiveGames = 0; // They are sitting out
+                if(players[id]) {
+                    players[id].waitTime++;
+                    players[id].consecutiveGames = 0; 
+                }
             });
 
-            // Reset wait times for those chosen
             matchConfig.tA.forEach(p => p.waitTime = 0);
             matchConfig.tB.forEach(p => p.waitTime = 0);
 
@@ -421,7 +554,6 @@ function loadData(){
             updateUI();
         }
 
-        // --- MATCH RESOLUTION & LOGGING ---
         function recordPartnership(id1, id2) {
             if (!partnerships[id1]) partnerships[id1] = {};
             if (!partnerships[id2]) partnerships[id2] = {};
@@ -452,26 +584,28 @@ function loadData(){
             recordPartnership(match.teamB[0], match.teamB[1]);
             recordOpponents(match.teamA, match.teamB);
 
-            // Process Winners
             winners.forEach(id => { 
-                players[id].wins++; 
-                players[id].matchesPlayed++; 
-                players[id].consecutiveGames++; // They just finished a game
-                players[id].lastResult = 'W';
-                queue.push(id); 
+                if(players[id]) {
+                    players[id].wins++; 
+                    players[id].matchesPlayed++; 
+                    players[id].consecutiveGames++; 
+                    players[id].lastResult = 'W';
+                    queue.push(id); 
+                }
             });
             
-            // Process Losers
             losers.forEach(id => { 
-                players[id].losses++; 
-                players[id].matchesPlayed++; 
-                players[id].consecutiveGames++;
-                players[id].lastResult = 'L';
-                queue.push(id); 
+                if(players[id]) {
+                    players[id].losses++; 
+                    players[id].matchesPlayed++; 
+                    players[id].consecutiveGames++;
+                    players[id].lastResult = 'L';
+                    queue.push(id); 
+                }
             });
 
-            const winNames = `${players[winners[0]].name} & ${players[winners[1]].name}`;
-            const loseNames = `${players[losers[0]].name} & ${players[losers[1]].name}`;
+            const winNames = `${players[winners[0]]?.name} & ${players[winners[1]]?.name}`;
+            const loseNames = `${players[losers[0]]?.name} & ${players[losers[1]]?.name}`;
             const logTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
             matchLogs.unshift(`
@@ -485,12 +619,25 @@ function loadData(){
             updateUI();
         }
 
+        function getRankedPlayersArray() {
+            return Object.values(players).map(p => {
+                const winRate = p.matchesPlayed === 0 ? 0 : (p.wins / p.matchesPlayed) * 100;
+                const efficiency = p.matchesPlayed === 0 ? 0 : (winRate * (p.rating / 5)).toFixed(1);
+                return { ...p, winRate: winRate.toFixed(1), efficiency: parseFloat(efficiency) };
+            }).sort((a, b) => {
+                if (b.efficiency !== a.efficiency) return b.efficiency - a.efficiency;
+                if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+                return b.wins - a.wins;
+            });
+        }
+
         // --- UI RENDERING ---
         function updateUI() {
             renderQueue();
             renderMatches();
             renderLeaderboard();
             renderLogs();
+            renderSessionHistory();
             scheduleSave();
         }
 
@@ -501,8 +648,8 @@ function loadData(){
 
             queue.forEach((id, index) => {
                 const p = players[id];
+                if (!p) return; // Safeguard if player was corrupted/deleted
                 
-                // Optional Status Indicators
                 let statusHtml = '';
                 if (p.lastResult === 'W') statusHtml = `<span class="status-badge status-w">W</span>`;
                 else if (p.lastResult === 'L') statusHtml = `<span class="status-badge status-l">L</span>`;
@@ -534,10 +681,10 @@ function loadData(){
             container.innerHTML = '';
             
             activeMatches.forEach((match) => {
-                const tA_p1 = players[match.teamA[0]].name;
-                const tA_p2 = players[match.teamA[1]].name;
-                const tB_p1 = players[match.teamB[0]].name;
-                const tB_p2 = players[match.teamB[1]].name;
+                const tA_p1 = players[match.teamA[0]]?.name || "Unknown";
+                const tA_p2 = players[match.teamA[1]]?.name || "Unknown";
+                const tB_p1 = players[match.teamB[0]]?.name || "Unknown";
+                const tB_p2 = players[match.teamB[1]]?.name || "Unknown";
                 const matchNum = match.id.replace('m_', '');
 
                 const div = document.createElement('div');
@@ -562,16 +709,7 @@ function loadData(){
             const tbody = document.getElementById('leaderboardBody');
             tbody.innerHTML = '';
 
-            const rankedPlayers = Object.values(players).map(p => {
-                const winRate = p.matchesPlayed === 0 ? 0 : (p.wins / p.matchesPlayed) * 100;
-                const efficiency = p.matchesPlayed === 0 ? 0 : (winRate * (p.rating / 5)).toFixed(1);
-                return { ...p, winRate: winRate.toFixed(1), efficiency: parseFloat(efficiency) };
-            }).sort((a, b) => {
-                if (b.efficiency !== a.efficiency) return b.efficiency - a.efficiency;
-                if (b.winRate !== a.winRate) return b.winRate - a.winRate;
-                return b.wins - a.wins;
-            });
-
+            const rankedPlayers = getRankedPlayersArray();
             rankedPlayers.forEach((p, index) => {
                 let rankDisplay = `${index + 1}`;
                 if (index === 0) rankDisplay = `<span class="rank-icon">🥇</span>1`;
@@ -605,9 +743,33 @@ function loadData(){
             }
             container.innerHTML = matchLogs.join('');
         }
-    window.addEventListener("beforeunload",saveData);
-loadData();
-updateUI();
-</script>
+
+        function renderSessionHistory() {
+            const container = document.getElementById('sessionHistoryList');
+            const sessions = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            
+            if (sessions.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">No archived sessions yet.</p>';
+                return;
+            }
+            
+            container.innerHTML = sessions.slice().reverse().map(s => `
+                <div class="history-item" onclick="restoreSession('${s.id}')">
+                    <div>
+                        <div class="history-title">${s.name}</div>
+                        <div class="history-date">${s.date} • Winner: ${s.winner}</div>
+                    </div>
+                    <div class="history-stats">
+                        <div>🎾 ${s.matches} Matches</div>
+                        <div>👥 ${s.playerCount} Players</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+    window.addEventListener("beforeunload", saveData);
+    loadData();
+    updateUI();
+    </script>
 </body>
 </html>
