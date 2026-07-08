@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PicklePro OP Builder V1.24</title>
+    <style>
+        /* Modern Color Palette & Typography */
+        :root {
+            --primary: #059669; 
+            --primary-hover: #047857;
+            --secondary: #3b82f6; 
+            --secondary-hover: #2563eb;
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --gold: #fbbf24;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg); color: var(--text-main); padding: 12px; line-height: 1.4; }
+        @media (min-width: 640px) { body { padding: 20px; } }
+
+        .container { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 16px; }
+        @media (min-width: 960px) { .container { grid-template-columns: 360px 1fr; gap: 24px; } .full-width { grid-column: 1 / -1; } }
+
+        header { background: linear-gradient(135deg, var(--primary), #10b981); color: white; padding: 18px; text-align: center; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        header h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 2px; }
+        header p { font-size: 0.85rem; opacity: 0.9; }
+        @media (min-width: 640px) { header { padding: 24px; margin-bottom: 24px; } header h1 { font-size: 2rem; } header p { font-size: 0.95rem; } }
+
+        .card { background: var(--card-bg); padding: 16px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid var(--border); }
+        @media (min-width: 640px) { .card { padding: 24px; } }
+
+        h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+
+        .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+        @media (min-width: 400px) { .form-group { flex-direction: row; } }
+
+        input[type="text"], select { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; outline: none; width: 100%; transition: border-color 0.2s; }
+        input[type="text"]:focus, select:focus { border-color: var(--primary); }
+        @media (min-width: 400px) { input[type="text"] { flex: 2; } select { flex: 1; width: auto; } }
+
+        button { background-color: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; white-space: nowrap; transition: all 0.2s ease; }
+        button:hover { background-color: var(--primary-hover); }
+        button:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        
+        .btn-manual { background-color: var(--secondary); width: 100%; margin-bottom: 8px; }
+        .btn-manual:hover { background-color: var(--secondary-hover); }
+        .btn-auto { width: 100%; margin-bottom: 16px; background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .btn-auto:hover { background: #b45309; }
+        .btn-danger { background-color: var(--danger); padding: 6px 10px; font-size: 0.8rem; }
+        .btn-danger:hover { background-color: var(--danger-hover); }
+
+        .queue-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #f9fafb; border: 1px solid var(--border); margin-bottom: 8px; border-radius: 8px; }
+        .queue-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .queue-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--secondary); cursor: pointer; flex-shrink: 0; }
+        .stars { color: var(--gold); font-size: 0.85rem; letter-spacing: 0.5px; white-space: nowrap; }
+
+        .active-courts-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+        @media (min-width: 640px) { .active-courts-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); } }
+
+        .match-card { background: #ffffff; border: 2px solid #e5e7eb; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .match-header { text-align: center; font-weight: 700; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; }
+        .team-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 4px; }
+        .team { flex: 1; text-align: center; background: #f9fafb; padding: 8px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.9rem; min-width: 0; }
+        .team div { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .vs-badge { background: var(--text-main); color: white; font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 10px; flex-shrink: 0; }
+        .match-actions { display: flex; gap: 8px; }
+        .match-actions button { flex: 1; background: white; color: var(--text-main); border: 1px solid var(--border); padding: 8px; font-size: 0.85rem; }
+        .match-actions button:hover { background: #f3f4f6; border-color: var(--primary); }
+
+        .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; text-align: left; min-width: 500px; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        @media (min-width: 640px) { th, td { padding: 16px; } }
+        th { background: #f9fafb; font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; }
+        tbody tr:hover { background-color: #f9fafb; }
+        .rank-icon { font-size: 1.1rem; margin-right: 3px; }
+
+        .tier-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+        .tier-pawn { background: #e5e7eb; color: #4b5563; }
+        .tier-knight { background: #dbeafe; color: #1e40af; }
+        .tier-duke { background: #fef3c7; color: #92400e; }
+        .tier-right { background: #e0f2fe; color: #0369a1; }
+        .tier-lexon { background: #f3e8ff; color: #6b21a8; }
+        .tier-sultan { background: #ffe4e6; color: #9f1239; }
+        .tier-body { background: #d1fae5; color: #065f46; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 0.9; } 50% { opacity: 1; box-shadow: 0 0 8px rgba(5, 150, 105, 0.4); } 100% { opacity: 0.9; } }
+
+        details { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; margin-top: 16px; overflow: hidden; }
+        summary { padding: 14px 20px; font-weight: 700; cursor: pointer; background: #f9fafb; list-style: none; display: flex; justify-content: space-between; font-size: 0.95rem; }
+        summary::-webkit-details-marker { display: none; }
+        .log-list { padding: 14px 20px; max-height: 260px; overflow-y: auto; }
+        .log-entry { padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem; }
+        .log-entry:last-child { border-bottom: none; }
+        .win-text { color: var(--primary); font-weight: bold; }
+        
+        .status-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 6px; }
+        .status-w { background: #dcfce7; color: #166534; }
+        .status-l { background: #fee2e2; color: #991b1b; }
+        
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Right Fit Pickleball Club OpenPlay Builder</h1>
+        <p>Powered by PicklePro PPR Engine (V1.24)</p>
+    </header>
+
+    <div class="container">
+        
+        <div>
+            <div class="card" style="margin-bottom: 16px;">
+                <h2>Add Player</h2>
+                <div class="form-group">
+                    <input type="text" id="playerName" placeholder="Player Name" autocomplete="off" onkeypress="handleEnter(event)">
+                    <select id="playerRating">
+                        <option value="1">1 Star</option>
+                        <option value="2">2 Stars</option>
+                        <option value="3" selected>3 Stars</option>
+                        <option value="4">4 Stars</option>
+                        <option value="5">5 Stars</option>
+                    </select>
+                    <button onclick="addPlayer()">Add</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>
+                    Waiting Queue 
+                    <span id="queueCount" style="color: var(--text-muted); font-size: 0.95rem;">(0)</span>
+                </h2>
+                
+                <button class="btn-auto" onclick="startAutoMatch()">⚡ Smart Auto Match</button>
+                <button class="btn-manual" id="btnManualMatch" onclick="startManualMatch()" disabled>🎯 Match Selected (0/4)</button>
+                
+                <div id="queueList"></div>
+            </div>
+        </div>
+
+        <div>
+            <div class="card" style="margin-bottom: 16px;">
+                <h2>Active Courts</h2>
+                <div id="activeMatches" class="active-courts-grid">
+                    <p style="color: var(--text-muted); font-size: 0.9rem; grid-column: 1/-1;">No active matches. Add players and start a game!</p>
+                </div>
+            </div>
+
+            <div class="card table-container">
+                <h2>Live Rankings</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player</th>
+                            <th>Rating</th>
+                            <th>W - L</th>
+                            <th>Win Rate</th>
+                            <th>PicklePro Rating</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="full-width">
+            <details>
+                <summary>
+                    <span>📜 Match History Logs</span>
+                    <span id="logCount">(0 Matches)</span>
+                </summary>
+                <div class="log-list" id="matchLogs">
+                    <div style="color: var(--text-muted); font-size: 0.85rem;">No matches completed yet.</div>
+                </div>
+            </details>
+        </div>
+
+    </div>
+
+    <script>
+        // --- STATE MANAGEMENT ---
+        let players = {};
+        let queue = [];
+        let activeMatches = [];
+        let matchLogs = [];
+        let matchCounter = 1;
+        
+        // Track History
+        let partnerships = {}; 
+        let opponents = {};
+
+// ==============================
+// Persistent Storage (V2)
+// ==============================
+const STORAGE_KEY = "picklepro_openplay_save";
+const SAVE_VERSION = 1;
+let saveTimeout = null;
+
+        
+// ==============================
+// SAVE / LOAD ENGINE
+// ==============================
+function getSaveData(){return {version:SAVE_VERSION,savedAt:new Date().toISOString(),players,queue,activeMatches,matchLogs,matchCounter,partnerships,opponents};}
+function scheduleSave(){clearTimeout(saveTimeout);saveTimeout=setTimeout(saveData,300);}
+function saveData(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(getSaveData()));}catch(e){console.error(e);}}
+function loadData(){
+ const raw=localStorage.getItem(STORAGE_KEY);
+ if(!raw)return;
+ try{
+  const d=JSON.parse(raw);
+  players=d.players||{};
+  queue=d.queue||[];
+  activeMatches=d.activeMatches||[];
+  matchLogs=d.matchLogs||[];
+  matchCounter=d.matchCounter||1;
+  partnerships=d.partnerships||{};
+  opponents=d.opponents||{};
+ }catch(e){console.error(e);localStorage.removeItem(STORAGE_KEY);}
+}
+
+
+        // Utility: Generate Stars
+        function getStars(num) { return '★'.repeat(num) + '☆'.repeat(5 - num); }
+
+        // Get Dynamic Tier (Recalibrated for better distribution)
+        function getTierInfo(score) {
+            let num = parseFloat(score);
+            
+            // Thresholds lowered so players can reach the top tiers
+            if (num >= 80.0) return { name: 'Pina Lexon', class: 'tier-lexon' };
+            if (num >= 60.0) return { name: 'Taga Right Fit', class: 'tier-right' };
+            if (num >= 40.0) return { name: 'Dili Taga Right Fit', class: 'tier-dili' };
+            if (num >= 20.0) return { name: 'Di Kamao', class: 'tier-dikamao' };
+            return { name: 'Uli sa Inyo oi', class: 'tier-uli' };
+        }
+
+        function handleEnter(e) { if (e.key === 'Enter') addPlayer(); }
+
+        function addPlayer() {
+            const nameInput = document.getElementById('playerName');
+            const ratingInput = document.getElementById('playerRating');
+            const name = nameInput.value.trim();
+            const rating = parseInt(ratingInput.value);
+
+            const exists=Object.values(players).some(p=>p.name.toLowerCase()===name.toLowerCase());
+            if(exists){alert('Player already exists.');return;}
+
+            if (!name) return alert('Please enter a player name.');
+
+            const id = 'p_' + Date.now() + Math.floor(Math.random() * 1000);
+            players[id] = {
+                id: id, name: name, rating: rating,
+                wins: 0, losses: 0, matchesPlayed: 0,
+                // New Advanced Tracking
+                waitTime: 0, 
+                consecutiveGames: 0,
+                lastResult: null 
+            };
+
+            queue.push(id);
+            nameInput.value = '';
+            nameInput.focus();
+            updateUI();
+        }
+
+        function removePlayerFromQueue(id) {
+            queue = queue.filter(playerId => playerId !== id);
+            updateUI();
+        }
+
+        function checkManualSelection() {
+            const checkboxes = document.querySelectorAll('.player-check:checked');
+            const btn = document.getElementById('btnManualMatch');
+            btn.innerText = `🎯 Match Selected (${checkboxes.length}/4)`;
+            btn.disabled = checkboxes.length !== 4;
+        }
+
+        // --- NEW SMART SCORING ENGINE ---
+
+        // Get combinations of array
+        function getCombinations(arr, size) {
+            let result = [];
+            function combine(path, start) {
+                if (path.length === size) { result.push(path); return; }
+                for (let i = start; i < arr.length; i++) {
+                    combine([...path, arr[i]], i + 1);
+                }
+            }
+            combine([], 0);
+            return result;
+        }
+
+        function getPartnerCount(id1, id2) { return partnerships[id1]?.[id2] || 0; }
+        function getOpponentCount(id1, id2) { return opponents[id1]?.[id2] || 0; }
+
+        function evaluateMatchScore(tA, tB) {
+            let score = 0;
+            let pA1 = tA[0], pA2 = tA[1], pB1 = tB[0], pB2 = tB[1];
+            let all4 = [pA1, pA2, pB1, pB2];
+
+            // 1. Same partner repeatedly (-50)
+            score -= (getPartnerCount(pA1.id, pA2.id) + getPartnerCount(pB1.id, pB2.id)) * 50;
+
+            // 2. Same opponents repeatedly (-30)
+            let oppCount = getOpponentCount(pA1.id, pB1.id) + getOpponentCount(pA1.id, pB2.id) + 
+                           getOpponentCount(pA2.id, pB1.id) + getOpponentCount(pA2.id, pB2.id);
+            score -= oppCount * 30;
+
+            // 3. Long waiting player (+20)
+            score += all4.reduce((sum, p) => sum + p.waitTime, 0) * 20;
+
+            // 4. Lowest games played (-15 per game, giving advantage to those with fewer games)
+            score -= all4.reduce((sum, p) => sum + p.matchesPlayed, 0) * 15;
+
+            // 5. Too many consecutive games (-20)
+            score -= all4.reduce((sum, p) => sum + p.consecutiveGames, 0) * 20;
+
+            // 6. Winner vs Winner / Loser vs Loser (+100)
+            let wCount = all4.filter(p => p.lastResult === 'W').length;
+            let lCount = all4.filter(p => p.lastResult === 'L').length;
+            
+            if (wCount === 4) score += 100; // Pure winner matchup
+            if (lCount === 4) score += 100; // Pure loser matchup
+            
+            // Sub-bonus: Split winners up onto opposing teams to play each other
+            if (wCount >= 2 && (pA1.lastResult==='W'||pA2.lastResult==='W') && (pB1.lastResult==='W'||pB2.lastResult==='W')) {
+                score += 40; 
+            }
+
+            // 7. Balance Skill Rating (So courts aren't completely unfair)
+            let ratingA = pA1.rating + pA2.rating;
+            let ratingB = pB1.rating + pB2.rating;
+            score -= Math.abs(ratingA - ratingB) * 40;
+
+            return score;
+        }
+
+        function startAutoMatch() {
+            if (queue.length < 4) return alert('Not enough players in the queue! (Need 4)');
+            
+            // To prevent massive lag, only evaluate combinations of the first 25 people in queue (12,650 combinations max)
+            let evalPool = queue.slice(0, 25);
+            let combos = getCombinations(evalPool, 4);
+            
+            let bestMatch = null;
+            let highestScore = -Infinity;
+
+            combos.forEach(fourIds => {
+                const p1 = players[fourIds[0]], p2 = players[fourIds[1]], p3 = players[fourIds[2]], p4 = players[fourIds[3]];
+                let arrangements = [
+                    { tA: [p1, p2], tB: [p3, p4] },
+                    { tA: [p1, p3], tB: [p2, p4] },
+                    { tA: [p1, p4], tB: [p2, p3] }
+                ];
+                arrangements.forEach(arr => {
+                    let score = evaluateMatchScore(arr.tA, arr.tB);
+                    if (score > highestScore) { highestScore = score; bestMatch = arr; }
+                });
+            });
+
+            console.log(`Auto-Match selected with Fairness Score: ${highestScore}`);
+            
+            // Remove selected from queue
+            let selectedIds = [...bestMatch.tA.map(p=>p.id), ...bestMatch.tB.map(p=>p.id)];
+            queue = queue.filter(id => !selectedIds.includes(id));
+            
+            createMatchConfigured(bestMatch);
+        }
+
+        function startManualMatch() {
+            const checkboxes = document.querySelectorAll('.player-check:checked');
+            if (checkboxes.length !== 4) return;
+            let selectedIds = Array.from(checkboxes).map(cb => cb.value);
+            queue = queue.filter(id => !selectedIds.includes(id));
+            
+            // Still run the scoring engine to automatically figure out the fairest way to team these 4 specific people up!
+            const p1 = players[selectedIds[0]], p2 = players[selectedIds[1]], p3 = players[selectedIds[2]], p4 = players[selectedIds[3]];
+            let arrangements = [
+                { tA: [p1, p2], tB: [p3, p4] },
+                { tA: [p1, p3], tB: [p2, p4] },
+                { tA: [p1, p4], tB: [p2, p3] }
+            ];
+            let bestMatch = null; let highestScore = -Infinity;
+            arrangements.forEach(arr => {
+                let score = evaluateMatchScore(arr.tA, arr.tB);
+                if (score > highestScore) { highestScore = score; bestMatch = arr; }
+            });
+
+            createMatchConfigured(bestMatch);
+            
+            const btn = document.getElementById('btnManualMatch');
+            btn.innerText = `🎯 Match Selected (0/4)`;
+            btn.disabled = true;
+        }
+
+        function createMatchConfigured(matchConfig) {
+            // Update tracking stats for everyone left in queue
+            queue.forEach(id => {
+                players[id].waitTime++;
+                players[id].consecutiveGames = 0; // They are sitting out
+            });
+
+            // Reset wait times for those chosen
+            matchConfig.tA.forEach(p => p.waitTime = 0);
+            matchConfig.tB.forEach(p => p.waitTime = 0);
+
+            activeMatches.push({
+                id: 'm_' + matchCounter++,
+                teamA: matchConfig.tA.map(p=>p.id),
+                teamB: matchConfig.tB.map(p=>p.id),
+                startTime: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            });
+            updateUI();
+        }
+
+        // --- MATCH RESOLUTION & LOGGING ---
+        function recordPartnership(id1, id2) {
+            if (!partnerships[id1]) partnerships[id1] = {};
+            if (!partnerships[id2]) partnerships[id2] = {};
+            partnerships[id1][id2] = (partnerships[id1][id2] || 0) + 1;
+            partnerships[id2][id1] = (partnerships[id2][id1] || 0) + 1;
+        }
+        
+        function recordOpponents(teamA, teamB) {
+            teamA.forEach(a => {
+                teamB.forEach(b => {
+                    if (!opponents[a]) opponents[a] = {};
+                    if (!opponents[b]) opponents[b] = {};
+                    opponents[a][b] = (opponents[a][b] || 0) + 1;
+                    opponents[b][a] = (opponents[b][a] || 0) + 1;
+                })
+            });
+        }
+
+        function resolveMatch(matchId, winningTeam) {
+            const matchIndex = activeMatches.findIndex(m => m.id === matchId);
+            if (matchIndex === -1) return;
+
+            const match = activeMatches[matchIndex];
+            const winners = winningTeam === 'A' ? match.teamA : match.teamB;
+            const losers = winningTeam === 'A' ? match.teamB : match.teamA;
+
+            recordPartnership(match.teamA[0], match.teamA[1]);
+            recordPartnership(match.teamB[0], match.teamB[1]);
+            recordOpponents(match.teamA, match.teamB);
+
+            // Process Winners
+            winners.forEach(id => { 
+                players[id].wins++; 
+                players[id].matchesPlayed++; 
+                players[id].consecutiveGames++; // They just finished a game
+                players[id].lastResult = 'W';
+                queue.push(id); 
+            });
+            
+            // Process Losers
+            losers.forEach(id => { 
+                players[id].losses++; 
+                players[id].matchesPlayed++; 
+                players[id].consecutiveGames++;
+                players[id].lastResult = 'L';
+                queue.push(id); 
+            });
+
+            const winNames = `${players[winners[0]].name} & ${players[winners[1]].name}`;
+            const loseNames = `${players[losers[0]].name} & ${players[losers[1]].name}`;
+            const logTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            matchLogs.unshift(`
+                <div class="log-entry">
+                    <span style="color:#9ca3af; font-size:0.75rem;">[${logTime}] Court ${matchId.replace('m_','')}</span><br>
+                    <span class="win-text">🏆 Winners: ${winNames}</span> def. <span>${loseNames}</span>
+                </div>
+            `);
+
+            activeMatches.splice(matchIndex, 1);
+            updateUI();
+        }
+
+        // --- UI RENDERING ---
+        function updateUI() {
+            renderQueue();
+            renderMatches();
+            renderLeaderboard();
+            renderLogs();
+            scheduleSave();
+        }
+
+        function renderQueue() {
+            const list = document.getElementById('queueList');
+            document.getElementById('queueCount').innerText = `(${queue.length})`;
+            list.innerHTML = '';
+
+            queue.forEach((id, index) => {
+                const p = players[id];
+                
+                // Optional Status Indicators
+                let statusHtml = '';
+                if (p.lastResult === 'W') statusHtml = `<span class="status-badge status-w">W</span>`;
+                else if (p.lastResult === 'L') statusHtml = `<span class="status-badge status-l">L</span>`;
+                
+                const div = document.createElement('div');
+                div.className = 'queue-item';
+                div.innerHTML = `
+                    <div class="queue-info">
+                        <input type="checkbox" class="player-check" value="${p.id}" onchange="checkManualSelection()">
+                        <div class="queue-name">${index + 1}. ${p.name} ${statusHtml}</div> 
+                        <span class="stars">${getStars(p.rating)}</span>
+                    </div>
+                    <button class="btn-danger" onclick="removePlayerFromQueue('${p.id}')">✕</button>
+                `;
+                list.appendChild(div);
+            });
+            checkManualSelection();
+        }
+
+        function renderMatches() {
+            const container = document.getElementById('activeMatches');
+            if (activeMatches.length === 0) {
+                container.style.display = 'block';
+                container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">No active matches.</p>';
+                return;
+            }
+
+            container.style.display = 'grid';
+            container.innerHTML = '';
+            
+            activeMatches.forEach((match) => {
+                const tA_p1 = players[match.teamA[0]].name;
+                const tA_p2 = players[match.teamA[1]].name;
+                const tB_p1 = players[match.teamB[0]].name;
+                const tB_p2 = players[match.teamB[1]].name;
+                const matchNum = match.id.replace('m_', '');
+
+                const div = document.createElement('div');
+                div.className = 'match-card';
+                div.innerHTML = `
+                    <div class="match-header">Court ${matchNum} • ${match.startTime}</div>
+                    <div class="team-row">
+                        <div class="team"><div>${tA_p1}</div><div>${tA_p2}</div></div>
+                        <div class="vs-badge">VS</div>
+                        <div class="team"><div>${tB_p1}</div><div>${tB_p2}</div></div>
+                    </div>
+                    <div class="match-actions">
+                        <button onclick="resolveMatch('${match.id}', 'A')">Team 1 Won</button>
+                        <button onclick="resolveMatch('${match.id}', 'B')">Team 2 Won</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderLeaderboard() {
+            const tbody = document.getElementById('leaderboardBody');
+            tbody.innerHTML = '';
+
+            const rankedPlayers = Object.values(players).map(p => {
+                const winRate = p.matchesPlayed === 0 ? 0 : (p.wins / p.matchesPlayed) * 100;
+                const efficiency = p.matchesPlayed === 0 ? 0 : (winRate * (p.rating / 5)).toFixed(1);
+                return { ...p, winRate: winRate.toFixed(1), efficiency: parseFloat(efficiency) };
+            }).sort((a, b) => {
+                if (b.efficiency !== a.efficiency) return b.efficiency - a.efficiency;
+                if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+                return b.wins - a.wins;
+            });
+
+            rankedPlayers.forEach((p, index) => {
+                let rankDisplay = `${index + 1}`;
+                if (index === 0) rankDisplay = `<span class="rank-icon">🥇</span>1`;
+                else if (index === 1) rankDisplay = `<span class="rank-icon">🥈</span>2`;
+                else if (index === 2) rankDisplay = `<span class="rank-icon">🥉</span>3`;
+
+                const tier = getTierInfo(p.efficiency);
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${rankDisplay}</strong></td>
+                    <td style="font-weight: 600; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name}</td>
+                    <td class="stars">${getStars(p.rating)}</td>
+                    <td>${p.wins} - ${p.losses}</td>
+                    <td>${p.winRate}%</td>
+                    <td>
+                        <span class="tier-badge ${tier.class}">${tier.name}</span> 
+                        <strong style="color: var(--primary); margin-left:4px;">(${p.efficiency})</strong>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderLogs() {
+            const container = document.getElementById('matchLogs');
+            document.getElementById('logCount').innerText = `(${matchLogs.length} Matches)`;
+            if (matchLogs.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem;">No matches completed yet.</div>';
+                return;
+            }
+            container.innerHTML = matchLogs.join('');
+        }
+    window.addEventListener("beforeunload",saveData);
+loadData();
+updateUI();
+</script>
+</body>
+</html>
